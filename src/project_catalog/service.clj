@@ -5,6 +5,14 @@
             [io.pedestal.http.route.definition :refer [defroutes]]
             [ring.util.response :as ring-resp]))
 
+
+(def projects
+  [{:name "Java Project" :deadline 20 :coders 5}
+   {:name "Clojure Project" :deadline 30 :coder 3}
+   {:name "Scala Project" :deadline 28 :coder 4}
+   {:name "Groovy Project" :deadline 29 :coder 3}])
+
+
 (defn about-page
   [request]
   (ring-resp/response (format "Clojure %s - served from %s"
@@ -15,12 +23,19 @@
   [request]
   (ring-resp/response "Hello World!"))
 
+
+(defn get-projects
+  [request]
+  (bootstrap/json-response projects))
+
+
 (defroutes routes
   ;; Defines "/" and "/about" routes with their associated :get handlers.
   ;; The interceptors defined after the verb map (e.g., {:get home-page}
   ;; apply to / and its children (/about).
   [[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
+     ["/projects" {:get get-projects}]
      ["/about" {:get about-page}]]]])
 
 ;; Consumed by project-catalog.server/create-server
