@@ -7,10 +7,13 @@
 
 
 (def projects
-  [{:name "Java Project" :deadline 20 :coders 5}
-   {:name "Clojure Project" :deadline 30 :coder 3}
-   {:name "Scala Project" :deadline 28 :coder 4}
-   {:name "Groovy Project" :deadline 29 :coder 3}])
+  {:java {:name "Java Project" :deadline 20 :coders 5}
+   :clojure {:name "Clojure Project" :deadline 30 :coder 3}
+   :scala {:name "Scala Project" :deadline 28 :coder 4}
+   :groovy {:name "Groovy Project" :deadline 29 :coder 3}})
+
+
+(:scala projects)
 
 
 (defn about-page
@@ -29,6 +32,11 @@
   (bootstrap/json-response projects))
 
 
+(defn get-project
+  [request]
+  (let [lang (get-in request [:path-params :lang])]
+    (bootstrap/json-response ((keyword lang) projects))))
+
 (defroutes routes
   ;; Defines "/" and "/about" routes with their associated :get handlers.
   ;; The interceptors defined after the verb map (e.g., {:get home-page}
@@ -36,6 +44,7 @@
   [[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/projects" {:get get-projects}]
+     ["/projects/:lang" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
 ;; Consumed by project-catalog.server/create-server
