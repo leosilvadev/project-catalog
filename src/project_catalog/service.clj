@@ -27,6 +27,11 @@
   (ring-resp/response "Hello World!"))
 
 
+(defn add-project
+  [request]
+  (prn (:json-params request))
+      (ring-resp/created "http://fakeurl" "fake 201"))
+
 (defn get-projects
   [request]
   (bootstrap/json-response projects))
@@ -43,7 +48,8 @@
   ;; apply to / and its children (/about).
   [[["/" {:get home-page}
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
-     ["/projects" {:get get-projects}]
+     ["/projects" {:get get-projects
+                   :post add-project}]
      ["/projects/:lang" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
@@ -69,7 +75,7 @@
               ::bootstrap/resource-path "/public"
 
               ;; Either :jetty, :immutant or :tomcat (see comments in project.clj)
-              ::bootstrap/type :jetty
+              ::bootstrap/type :immutant
               ;;::bootstrap/host "localhost"
               ::bootstrap/port 8080})
 
