@@ -3,7 +3,10 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route.definition :refer [defroutes]]
-            [ring.util.response :as ring-resp]))
+            [ring.util.response :as ring-resp]
+
+            [monger.collection :as mc]
+            [monger.json]))
 
 
 (def projects
@@ -77,5 +80,5 @@
               ;; Either :jetty, :immutant or :tomcat (see comments in project.clj)
               ::bootstrap/type :immutant
               ;;::bootstrap/host "localhost"
-              ::bootstrap/port 8080})
+              ::bootstrap/port 5000})
 
