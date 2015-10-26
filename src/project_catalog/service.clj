@@ -5,9 +5,16 @@
             [io.pedestal.http.route.definition :refer [defroutes]]
             [ring.util.response :as ring-resp]
 
+            [monger.core :as mg]
             [monger.collection :as mc]
             [monger.json]))
 
+
+(defonce mongo-db
+  (let [conn (mg/connect)]
+  (mg/get-db conn "project-catalog")))
+
+(defonce catalogs-coll "catalogs")
 
 (def projects
   {:java {:name "Java Project" :deadline 20 :coders 5}
@@ -16,29 +23,22 @@
    :groovy {:name "Groovy Project" :deadline 29 :coder 3}})
 
 
-(:scala projects)
-
-
 (defn about-page
   [request]
   (ring-resp/response (format "Clojure %s - served from %s"
                               (clojure-version)
                               (route/url-for ::about-page))))
 
-(defn home-page
+(defn get-projects
   [request]
-  (ring-resp/response "Hello World!"))
+  (bootstrap/json-response
+    (mc/find-maps mongo-db catalogs-coll)))
 
 
 (defn add-project
   [request]
-  (prn (:json-params request))
-      (ring-resp/created "http://fakeurl" "fake 201"))
-
-(defn get-projects
-  [request]
-  (bootstrap/json-response projects))
-
+  (mc/insert mongo-db catalogs-coll (:json-params request))
+  (ring-resp/created "http://fakeurl" "fake 201"))
 
 (defn get-project
   [request]
@@ -49,7 +49,7 @@
   ;; Defines "/" and "/about" routes with their associated :get handlers.
   ;; The interceptors defined after the verb map (e.g., {:get home-page}
   ;; apply to / and its children (/about).
-  [[["/" {:get home-page}
+  [[["/"
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/projects" {:get get-projects
                    :post add-project}]
