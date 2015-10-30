@@ -9,12 +9,12 @@
             [monger.collection :as mc]
             [monger.json]))
 
-
-(defonce mongo-db
-  (let [conn (mg/connect)]
-  (mg/get-db conn "project-catalog")))
+(defonce mongo-url (System/getenv "MONGO_CONNECTION"))
 
 (defonce catalogs-coll "catalogs")
+
+(defonce mongo-db
+  (:db (mg/connect-via-uri (System/getenv "MONGO_CONNECTION"))))
 
 (def projects
   {:java {:name "Java Project" :deadline 20 :coders 5}
@@ -37,13 +37,14 @@
 
 (defn add-project
   [request]
-  (mc/insert mongo-db catalogs-coll (:json-params request))
-  (ring-resp/created "http://fakeurl" "fake 201"))
+  (let [incoming (:json-params request)])
+  (let [result (mc/insert-and-return mongo-db catalogs-coll (:json-params request))]
+    (bootstrap/json-response {:id (:_id result)})))
 
 (defn get-project
   [request]
-  (let [lang (get-in request [:path-params :lang])]
-    (bootstrap/json-response ((keyword lang) projects))))
+  (let [name (get-in request [:path-params :name])]
+    (bootstrap/json-response (mc/find-maps mongo-db catalogs-coll {:name name}))))
 
 (defroutes routes
   ;; Defines "/" and "/about" routes with their associated :get handlers.
@@ -53,7 +54,7 @@
      ^:interceptors [(body-params/body-params) bootstrap/html-body]
      ["/projects" {:get get-projects
                    :post add-project}]
-     ["/projects/:lang" {:get get-project}]
+     ["/projects/:name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
 ;; Consumed by project-catalog.server/create-server
