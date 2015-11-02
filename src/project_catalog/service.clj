@@ -1,14 +1,29 @@
 (ns project-catalog.service
-  (:require [io.pedestal.http :as bootstrap]
+  (:require [clojure.data.json :as json]
+
+            [io.pedestal.http :as bootstrap]
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route.definition :refer [defroutes]]
             [io.pedestal.interceptor.helpers :refer [definterceptor defhandler]]
             [ring.util.response :as ring-resp]
 
+            [clj-http.client :as client]
+
             [monger.core :as mg]
             [monger.collection :as mc]
             [monger.json]))
+
+
+(defn git-search [q]
+  (let [result (client/get (format "https://api.github.com/search/repositories?q=%s+language:clojure" q)
+            {:debug false
+             :content-type :json
+             :accept :json})]
+      (json/read-str (result :body))))
+
+(defn git-get [request]
+  (bootstrap/json-response (git-search (get-in request [:query-params :q]))))
 
 (defonce mongo-url (System/getenv "MONGO_CONNECTION"))
 
@@ -52,6 +67,32 @@
   (let [name (get-in request [:path-params :name])]
     (bootstrap/json-response (mc/find-maps mongo-db catalogs-coll {:name name}))))
 
+
+(defn auth0-token []
+  (let [ret
+        (client/post "https://jemez.auth0.com/oauth/token"
+                     {:debug false
+                      :content-type :json
+                      :form-params {:client_id (System/getenv "AUTH0_CLIENT_ID")
+                                    :client_secret (System/getenv "AUTH0_SECRET")
+                                    :grant_type "client_credentials"}})]
+    (json/read-str (ret :body))))
+
+
+(defn auth0-connections [token]
+  (let [ret
+        (client/get "https://jemez.auth0.com/api/connections"
+                    {:debug false
+                     :content-type :json
+                     :accept :json
+                     :headers {"Authorization" (format "Bearer %s" token)}})]
+    (ret :body)))
+
+
+
+(auth0-connections ((auth0-token) "access_token"))
+
+
 (defroutes routes
   ;; Defines "/" and "/about" routes with their associated :get handlers.
   ;; The interceptors defined after the verb map (e.g., {:get home-page}
@@ -60,6 +101,7 @@
      ^:interceptors [(body-params/body-params) bootstrap/html-body token-check]
      ["/projects" {:get get-projects
                    :post add-project}]
+     ["/see-also" {:get git-get}]
      ["/projects/:name" {:get get-project}]
      ["/about" {:get about-page}]]]])
 
