@@ -11,9 +11,10 @@
 
             [clj-http.client :as client]
 
-            [monger.core :as mg]
             [monger.collection :as mc]
-            [monger.json]))
+            [monger.json]
+
+            [project-catalog.mongodb :as db]))
 
 
 
@@ -64,12 +65,6 @@
 
 
 
-(defonce mongo-url (System/getenv "MONGO_CONNECTION"))
-
-(defonce catalogs-coll "catalogs")
-
-(defonce mongo-db
-  (:db (mg/connect-via-uri (System/getenv "MONGO_CONNECTION"))))
 
 (defhandler token-check [request]
   (let [token (get-in request [:headers "x-catalog-token"])]
@@ -92,13 +87,13 @@
 (defn get-projects
   [request]
   (bootstrap/json-response
-    (mc/find-maps mongo-db catalogs-coll)))
+    (mc/find-maps db/mongo-db db/catalogs-coll)))
 
 
 (defn add-project
   [request]
   (let [incoming (:json-params request)])
-  (let [result (mc/insert-and-return mongo-db catalogs-coll (:json-params request))]
+  (let [result (mc/insert-and-return db/mongo-db db/catalogs-coll (:json-params request))]
     (bootstrap/json-response {:id (:_id result)})))
 
 
@@ -115,14 +110,14 @@
 (defn add-project-xml
   [request]
   (let [incoming (slurp (:body request))
-        ok (mc/insert-and-return mongo-db catalogs-coll (monger-mapper incoming))]
+        ok (mc/insert-and-return db/mongo-db db/catalogs-coll (monger-mapper incoming))]
     (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (xml-out ok)))
         (ring-resp/content-type "application/xml"))))
 
 (defn get-project
   [request]
   (let [name (get-in request [:path-params :name])]
-    (bootstrap/json-response (mc/find-maps mongo-db catalogs-coll {:name name}))))
+    (bootstrap/json-response (mc/find-maps db/mongo-db db/catalogs-coll {:name name}))))
 
 
 (defn auth0-token []
