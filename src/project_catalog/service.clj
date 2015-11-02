@@ -3,6 +3,7 @@
             [io.pedestal.http.route :as route]
             [io.pedestal.http.body-params :as body-params]
             [io.pedestal.http.route.definition :refer [defroutes]]
+            [io.pedestal.interceptor.helpers :refer [definterceptor defhandler]]
             [ring.util.response :as ring-resp]
 
             [monger.core :as mg]
@@ -15,6 +16,11 @@
 
 (defonce mongo-db
   (:db (mg/connect-via-uri (System/getenv "MONGO_CONNECTION"))))
+
+(defhandler token-check [request]
+  (let [token (get-in request [:headers "x-catalog-token"])]
+    (if (not (= token "1234"))
+      (assoc (ring-resp/response {:body "access denied"}) :status 403))))
 
 (def projects
   {:java {:name "Java Project" :deadline 20 :coders 5}
@@ -51,7 +57,7 @@
   ;; The interceptors defined after the verb map (e.g., {:get home-page}
   ;; apply to / and its children (/about).
   [[["/"
-     ^:interceptors [(body-params/body-params) bootstrap/html-body]
+     ^:interceptors [(body-params/body-params) bootstrap/html-body token-check]
      ["/projects" {:get get-projects
                    :post add-project}]
      ["/projects/:name" {:get get-project}]
