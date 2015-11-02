@@ -9,38 +9,11 @@
             [monger.collection :as mc]
             [monger.json]
 
-            [project-catalog.mongodb :as db]))
+            [project-catalog.mongodb :as db]
+            [project-catalog.project.helper :as helper]))
 
 
-(defn get-by-tag [proj-map-in tname]
-  (->> proj-map-in
-       :content
-       (filter #(= (:tag %) tname))
-       first
-       :content
-       first))
 
-
-(defn xml-out [known-map]
-  (xml/element :project {}
-    (xml/element :_id {} (.toString (:_id known-map)))
-    (xml/element :proj-name {} (:proj-name known-map))
-    (xml/element :name {} (:name known-map))
-    (xml/element :framework {} (:framework known-map))
-    (xml/element :repo {} (:repo known-map))
-    (xml/element :language {} (:language known-map))))
-
-
-(defn monger-mapper [xmlstring]
-  "take a raw xml string, and map a known structure into a simple map"
-  (let [proj-xml (xml/parse-str xmlstring)]
-    {
-       :proj-name (get-by-tag proj-xml :proj-name)
-       :name (get-by-tag proj-xml :name)
-       :framework (get-by-tag proj-xml :framework)
-       :language (get-by-tag proj-xml :language)
-       :repo (get-by-tag proj-xml :repo)
-    }))
 
 
 (defn git-search [q]
@@ -68,8 +41,8 @@
 (defn add-project-xml
   [request]
   (let [incoming (slurp (:body request))
-        ok (mc/insert-and-return db/mongo-db db/catalogs-coll (monger-mapper incoming))]
-    (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (xml-out ok)))
+        ok (mc/insert-and-return db/mongo-db db/catalogs-coll (helper/monger-mapper incoming))]
+    (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (helper/xml-out ok)))
         (ring-resp/content-type "application/xml"))))
 
 
