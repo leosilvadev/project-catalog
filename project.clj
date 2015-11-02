@@ -25,5 +25,5 @@
   :profiles {:dev {:aliases {"run-dev" ["trampoline" "run" "-m" "project-catalog.server/run-dev"]}
                    :dependencies [[io.pedestal/pedestal.service-tools "0.4.0"]]}
              :uberjar {:aot [project-catalog.server]}}
-  :main ^{:skip-aot true} project-catalog.server)
+  :main ^{:skip-aot true} project-catalog.server )
 
