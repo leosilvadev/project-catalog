@@ -1,15 +1,10 @@
 (ns project-catalog.project.api
   (:require [clojure.data.json :as json]
             [clojure.data.xml :as xml]
+            [clj-http.client :as client]
 
             [io.pedestal.http :as bootstrap]
-            [io.pedestal.http.route :as route]
-            [io.pedestal.http.body-params :as body-params]
-            [io.pedestal.http.route.definition :refer [defroutes]]
-            [io.pedestal.interceptor.helpers :refer [definterceptor defhandler]]
             [ring.util.response :as ring-resp]
-
-            [clj-http.client :as client]
 
             [monger.collection :as mc]
             [monger.json]
