@@ -8,8 +8,6 @@
                  [org.clojure/data.xml "0.0.8"]
                  [io.pedestal/pedestal.service "0.4.0"]
 
-                 ;; Remove this line and uncomment one of the next lines to
-                 ;; use Immutant or Tomcat instead of Jetty:
                  ;; [io.pedestal/pedestal.jetty "0.4.0"]
                  [io.pedestal/pedestal.immutant "0.4.0"]
                  [clj-http "2.0.0"]
