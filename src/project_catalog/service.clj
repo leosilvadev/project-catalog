@@ -1,5 +1,6 @@
 (ns project-catalog.service
   (:require [clojure.data.json :as json]
+            [clojure.data.xml :as xml]
 
             [io.pedestal.http :as bootstrap]
             [io.pedestal.http.route :as route]
@@ -15,6 +16,29 @@
             [monger.json]))
 
 
+
+(def raw-proj-string "<project>
+    <proj-name>xml test project</proj-name>
+    <name>Important Project</name>
+    <language>Clojure</language>
+    <repo>test</repo>
+  </project>")
+
+(def proj-xml (xml/parse-str raw-proj-string))
+
+(:content proj-xml)
+
+(defn get-by-tag [proj-map-in tname]
+  (->> proj-map-in
+       :content
+       (filter #(= (:tag %) tname))
+       first
+       :content
+       first))
+
+
+(get-by-tag proj-xml :name)
+
 (defn git-search [q]
   (let [result (client/get (format "https://api.github.com/search/repositories?q=%s+language:clojure" q)
             {:debug false
@@ -24,6 +48,21 @@
 
 (defn git-get [request]
   (bootstrap/json-response (git-search (get-in request [:query-params :q]))))
+
+
+
+(defn monger-mapper [xmlstring]
+  "take a raw xml string, and map a known structure into a simple map"
+  (let [proj-xml (xml/parse-str xmlstring)]
+    {
+       :proj-name (get-by-tag proj-xml :proj-name)
+       :name (get-by-tag proj-xml :name)
+       :framework (get-by-tag proj-xml :framework)
+       :language (get-by-tag proj-xml :language)
+       :repo (get-by-tag proj-xml :repo)
+    }))
+
+
 
 (defonce mongo-url (System/getenv "MONGO_CONNECTION"))
 
@@ -61,6 +100,24 @@
   (let [incoming (:json-params request)])
   (let [result (mc/insert-and-return mongo-db catalogs-coll (:json-params request))]
     (bootstrap/json-response {:id (:_id result)})))
+
+
+(defn xml-out [known-map]
+  (xml/element :project {}
+    (xml/element :_id {} (.toString (:_id known-map)))
+    (xml/element :proj-name {} (:proj-name known-map))
+    (xml/element :name {} (:name known-map))
+    (xml/element :framework {} (:framework known-map))
+    (xml/element :repo {} (:repo known-map))
+    (xml/element :language {} (:language known-map))))
+
+
+(defn add-project-xml
+  [request]
+  (let [incoming (slurp (:body request))
+        ok (mc/insert-and-return mongo-db catalogs-coll (monger-mapper incoming))]
+    (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (xml-out ok)))
+        (ring-resp/content-type "application/xml"))))
 
 (defn get-project
   [request]
@@ -101,6 +158,7 @@
      ^:interceptors [(body-params/body-params) bootstrap/html-body token-check]
      ["/projects" {:get get-projects
                    :post add-project}]
+     ["/projects-xml" {:post add-project-xml}]
      ["/see-also" {:get git-get}]
      ["/projects/:name" {:get get-project}]
      ["/about" {:get about-page}]]]])
