@@ -15,7 +15,10 @@
      ^:interceptors [(body-params/body-params) bootstrap/html-body auth/token-check]
      ["/projects" {:get api/get-projects
                    :post api/add-project}]
-     ["/projects-xml" {:post api/add-project-xml}]
+
+     ["/projects.xml" {:get api/get-projects-xml
+                       :post api/add-project-xml}]
+
      ["/see-also" {:get api/git-get}]
      ["/projects/:name" {:get api/get-project}]]]])
 

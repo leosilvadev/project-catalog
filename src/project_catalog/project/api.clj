@@ -15,14 +15,13 @@
 
 
 
-
+;;; JSON API
 (defn git-search [q]
   (let [result (client/get (format "https://api.github.com/search/repositories?q=%s+language:clojure" q)
             {:debug false
              :content-type :json
              :accept :json})]
       (json/read-str (result :body))))
-
 
 
 (defn get-projects
@@ -37,15 +36,6 @@
   (let [result (mc/insert-and-return db/mongo-db db/catalogs-coll (:json-params request))]
     (bootstrap/json-response {:id (:_id result)})))
 
-
-(defn add-project-xml
-  [request]
-  (let [incoming (slurp (:body request))
-        ok (mc/insert-and-return db/mongo-db db/catalogs-coll (helper/monger-mapper incoming))]
-    (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (helper/xml-out ok)))
-        (ring-resp/content-type "application/xml"))))
-
-
 (defn get-project
   [request]
   (let [name (get-in request [:path-params :name])]
@@ -54,3 +44,25 @@
 
 (defn git-get [request]
   (bootstrap/json-response (git-search (get-in request [:query-params :q]))))
+
+
+
+
+;;; XML API
+(defn add-project-xml
+  [request]
+  (let [incoming (slurp (:body request))
+        ok (mc/insert-and-return db/mongo-db db/catalogs-coll (helper/monger-mapper incoming))]
+    (-> (ring-resp/created "http://resource-for-my-created-item" (xml/emit-str (helper/xml-out ok)))
+        (ring-resp/content-type "application/xml"))))
+
+(defn get-projects-xml
+  [request]
+  (let [projects (mc/find-maps db/mongo-db db/catalogs-coll)
+      xml (map #(helper/xml-out %) (mc/find-maps db/mongo-db db/catalogs-coll))]
+    (-> (ring-resp/response (xml/emit-str xml))
+        (ring-resp/content-type "application/xml"))))
+
+
+
+
